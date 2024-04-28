@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+	<title>CAA Outreach</title>
+
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	
+	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
+
+<script type="text/javascript" src="miniMap.js"></script>
+<link rel='stylesheet' href='https://unpkg.com/leaflet-control-mini-map@0.4.0/dist/minimap.css'>
+
+	<style>
+		html, body {
+			height: 100%;
+			margin: 0;
+		}
+		#map {
+
+		}
+	</style>
+
+	<style>#map { width: 100%; height: 100%; }
+.info { padding: 6px 8px; font: 32px/32px Arial, Helvetica, sans-serif; background: pink; background: rgba(255,255,217,0.52); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; } .info h4 { margin: 0 0 5px; color: #777; }
+.legend { text-align: left; line-height: 28px; color: #555; } .legend i { width: 28px; height: 28px; float: left; margin-right: 8px; opacity: 0.7; }</style>
+</head>
+<body>
+
+<div id='map'></div>
+
+
+<script type="text/javascript" src="SiteVisit3_2.js"></script>
+<script type="text/javascript" src="colorado.js"></script>
+<script type="text/javascript">
+
+	var map = L.map('map').setView([40.6273675, -107.131], 10);
+
+	
+	var CartoDB_Voyager = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+		attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+		subdomains: 'abcd',
+		maxZoom: 20
+	}).addTo(map);
+
+
+	// control that shows state info on hover
+	var info = L.control();
+
+	info.onAdd = function (map) {
+		this._div = L.DomUtil.create('div', 'info');
+		this.update();
+		return this._div;
+	};
+
+	
+
+	
+		info.update = function (props) {
+		this._div.innerHTML = '<h4>Community Agriculture Alliance <br> Water Outreach 2023/2024</h4>' +  (props ?
+			'<b>' + props.Contact_Info + '</b><br />' + props.Name
+			: '');
+	};
+	
+	info.addTo(map);
+var stStyle = {
+    color: "#808080",
+    opacity: 1,
+    fillOpacity: 0.2
+};
+
+
+function getColor(d) {
+		return 	d == "Elk River Visit" 	? '#00b159' :
+				d == "Middle Yampa River Visit"  ? '#45d8fa' :
+				d == "Unknown"  ? '#00b159' :
+								'#00b159';
+		}
+
+
+	function style(feature) {
+		return {
+			weight:2,
+			opacity: 1,
+			color: 'white',
+			dashArray: '0',
+			fillOpacity: 0.7,
+			fillColor: getColor(feature.properties.SECTION)
+		};
+	}
+
+	function highlightFeature(e) {
+		var layer = e.target;
+
+		layer.setStyle({
+			weight: 5,
+			color: '#666',
+			dashArray: '',
+			fillOpacity: 0.7
+		});
+
+		if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+			layer.bringToFront();
+		}
+
+		info.update(layer.feature.properties);
+	}
+
+	var geojson;
+
+	function resetHighlight(e) {
+		geojson.resetStyle(e.target);
+		info.update();
+	}
+
+	function zoomToFeature(e) {
+		map.fitBounds(e.target.getBounds());
+	}
+
+	function onEachFeature(feature, layer) {
+		layer.on({
+			mouseover: highlightFeature,
+			mouseout: resetHighlight,
+		});
+layer.bindTooltip(feature.properties.Name);		
+	}
+	
+	
+var coloradoLayer = L.geoJson(colorado, {
+	style: stStyle
+	}).addTo(map);
+	
+
+
+
+	geojson = L.geoJson(ramps, {
+		pointToLayer: function(geoJsonPoint, latlng) {
+                        return L.circleMarker(latlng);},
+onEachFeature: onEachFeature,
+						style:style
+	}).addTo(map);
+var Esri_WorldPhysical = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Physical_Map/MapServer/tile/{z}/{y}/{x}', {
+		attribution: 'Tiles &copy; Esri &mdash; Source: US National Park Service',
+		maxZoom: 8
+	});
+	var miniMap = new L.Control.MiniMap(Esri_WorldPhysical).addTo(map);	
+var baseLayers = {
+    "Carto Voyager": CartoDB_Voyager
+};
+
+var overlays = {
+    "CAA 2023/2024 Outreach Vists": geojson,
+	"Colorado Boundary": coloradoLayer
+	
+};
+L.control.layers(baseLayers, overlays).addTo(map);
+L.control.scale().addTo(map);
+
+const legend = L.control({position: 'bottomright'});
+
+	legend.onAdd = function (map) {
+
+		const div = L.DomUtil.create('div', 'info legend');
+		const grades = ["Elk River Visit", "Middle Yampa River Visit"];
+		const labels = [];
+		let label;
+
+		for (let i = 0; i < grades.length; i++) {
+			label = grades[i];
+			labels.push(`<i style="background:${getColor(label)};width: 18px;height: 18px; border-radius:50%"></i> ${label}`);
+		}
+
+		div.innerHTML = labels.join('<br> ');
+		return div;
+	};
+
+	legend.addTo(map);
+
+</script>
+
+
+
+
+</body>
+</html>
